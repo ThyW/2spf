@@ -25,8 +25,11 @@ class Network:
             r1 = self.find_id(a)
             r2 = self.find_id(b)
 
+            if not (r1 and r2):
+                return
+
             # simulation of becoming neighbors between two routers
-            r1.add_neighbor(r2)
+            r1.add_neighbor(r2.send_hello())
 
             if r1 and r2:
                 lsa = LinkStateAdvertisement(0,
@@ -57,3 +60,4 @@ class Network:
         return None
 
     def run(self) -> None:
+        pass

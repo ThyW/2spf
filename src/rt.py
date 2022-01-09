@@ -15,12 +15,12 @@ class DestType(IntEnum):
 @dataclass
 class RTEntry:
     destination_type: int # alwasy going to be 1
-    destination_id: int # id of the destination router
-    network_mask: int # ignore
-    path_type: int # this will always be one, since we only simulate paths
-                   # within a network
-    cost: int # total cosst
-    next_hop: int # id of the "next hop" router
+    destination_id: int   # id of the destination router
+    network_mask: int     # ignore
+    path_type: int     # this will always be one, since we only simulate paths
+                       # within a network
+    cost: int          # total cost
+    next_hop: int      # id of the "next hop" router
 
     @classmethod
     def from_lsa(cls, adv: LinkStateAdvertisement, next_hop_id: int) -> "RTEntry":
@@ -32,9 +32,21 @@ class RTEntry:
                                                # as well as each router having
                                                # only one interface, therefore
                                                # only one RLABody
-                       next_hop_id) # TODO
+                       next_hop_id)            # TODO
+
+    @classmethod
+    def create(cls, dest: int, cost: int, next_hop: int) -> "RTEntry":
+        return RTEntry(1,
+                       dest,
+                       0xffffffff,
+                       1,
+                       cost,
+                       next_hop)
 
 
 class RoutingTable:
     def __init__(self):
         self._entries: List[RTEntry] = list()
+
+    def add_entry(self, entry: RTEntry) -> None:
+        self._entries.append(entry)
