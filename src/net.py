@@ -8,8 +8,8 @@ class Network:
     def __init__(self) -> None:
         self._routers: List[Router] = list()
         self._lsas: List[LinkStateAdvertisement] = list()
-        self._last_address: IpAddress = IpAddress(x) if x := IpAddress.\
-            int_from_str("192.168.0.0") else IpAddress(0)
+        self._last_address: IpAddress = IpAddress(x) if\
+                (x := IpAddress.int_from_str("192.168.0.0")) else IpAddress(0)
 
     def add_routers(self, input: List[int]) -> None:
         for index in input:

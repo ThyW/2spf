@@ -1,0 +1,19 @@
+@document.meta
+        title: TODO
+        description: 
+        authors: zir
+        categories: 
+        created: 2022-01-10
+        version: 0.0.9
+@end
+
+* TODOS
+- [x] (GUI) Make router drawing look better
+    - *NOTE* maybe have an image for that, maybe just use little arcs to simulate connections
+    - [_] make it larger and more colorful
+- [ ] (BACK-END) Implement support for multi access networks
+    - [ ] add a switch which just works as a way to interconnect all routers connected to it
+    - [ ] this should also be a part of the GUI.
+- [x] (GUI) Implement a better configuration menu for routers and switches
+- [x] (GUI) Better symbols for routers and switches
+- [x] (GUI) Link cost should be able to be manually configured
