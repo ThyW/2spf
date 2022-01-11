@@ -8,24 +8,63 @@ from heapq import heappop, heappush
 
 
 class Node:
+    """
+    Node in a graph.
+
+    This is used when we run the Dijkstra's algorithm for finding the best
+    paths to each router in a network.
+
+    ---
+    Attributes:
+    ---
+        * id : int : Router ID of this router represented as a graph vertex(node).
+        * cost int : Cost of getting to this vertex. The lower the index, the 
+                     likelier is a vertex going to be visited.
+        * neighbors: List[Tuple[Node, int]] : A list of all neighbor vertices.
+    """
     def __init__(self, id: int) -> None:
+        """
+        Create a new node.
+
+        :id: unique id of the Node, in our case a router, therefore, this
+             should be the router ID of the router we are interpreting as a
+             node.
+        """
         self.id: int = id
         self.cost: int = 100000
         self.neighbors: List[Tuple[Node, int]] = list()
 
     def add(self, n: "Node", cost: int) -> None:
+        """
+        Add a new neighbor to an existing node.
+
+        :n: Node object we want to add as a neighbor.
+        :cost: The cost of the link between this node and the one we are
+        adding.
+        """
         self.neighbors.append((n, cost))
 
     def __lt__(self, o: "Node") -> bool:
+        """
+        This method is implemented due to the fact that we are passing nodes
+        into a heap, since our Dijkstra's algorithm is implemented using a min
+        heap.
+        """
         return self.cost < o.cost
 
 
 class LinkStateDatabase:
     """
-    Database holding information about all link state advertisements recieved
-    by the router.
+    Database holding all Link State Advertisements received by the router.
     """
-    def __init__(self, id) -> None:
+    def __init__(self, id: int) -> None:
+        """
+        Creates a new Link State Database.
+
+        :id: Router ID of our current router. This is required, because we need
+             to know our router ID when we run the SPF algorithm.
+             Theoretically, this is not necessary to have as a class attribute.
+        """
         self._content: List[LinkStateAdvertisement] = list()
         self._my_id: int = id
 
@@ -37,13 +76,17 @@ class LinkStateDatabase:
 
     def add(self, adv: LinkStateAdvertisement) -> None:
         """
-        Add a new link state advertisement to the link state database. 
+        Add a new link state advertisement to the link state database.
+
+        :adv: A Link State Advertisement we wish to be added to the database.
         """
         self._content.append(adv)
 
     def remove(self, adv: LinkStateAdvertisement) -> None:
         """
         Remove a link state advertisement from the link state database.
+
+        :adv: A Link State Advertisement we wish removed from the database.
         """
         for each in self._content:
             if each.ls_id == adv.ls_id:
@@ -51,8 +94,15 @@ class LinkStateDatabase:
 
     def create_routing_table(self) -> RoutingTable:
         """
-        Create a graph of all routers, then run the djikstra algorithm and
-        consturct a routing table.
+        This method does three things:
+            1. Constructs a graph of the network based on the information from
+            all Link State Advertisements received.
+            2. Calculate the best route to each of the networks routers. This
+            is done with the use of Dijkstra's algorithm.
+            3. Create and return a Routing Table, this holds entries about
+            every destination (Router) on the network. For more info on how a
+            Routing Table is structured, please consult its documentation
+            found in the `rt.py` file.
         """
         rt = RoutingTable()
         nodes: List[Node] = list()
@@ -106,4 +156,3 @@ class LinkStateDatabase:
                 print("[ERROR] Incomplete entry, total cost.")
 
         return rt
-

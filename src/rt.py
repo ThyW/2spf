@@ -7,6 +7,9 @@ from .link_state import LinkStateAdvertisement
 
 
 class DestType(IntEnum):
+    """
+    Type of the destination in a Routing Table Entry
+    """
     NETWORK = 1,
     AREA_BORDER_ROUTER = 2
     AS_BOUNDRY_ROUTER = 3
@@ -14,6 +17,22 @@ class DestType(IntEnum):
 
 @dataclass
 class RTEntry:
+    """
+    Single entry in a routing table.
+
+    ---
+    Attributes:
+    ---
+    * destination_type: int : the type of the destination this route leads to.
+      `ALWAYS 1`
+    * destination_id: int : router ID of the destination router.
+    * network_mask: int : network mask with which a sub net can be derived. 
+      `IGNORE`
+    * path_type: type of the path, intra-network, inter-network and others.
+      `ALWAYS 1`
+    * cost: int : total cost of this path.
+    * next_hop: int : router ID of the next step in packet's journey.
+    """
     destination_type: int # alwasy going to be 1
     destination_id: int   # id of the destination router
     network_mask: int     # ignore
@@ -36,6 +55,9 @@ class RTEntry:
 
     @classmethod
     def create(cls, dest: int, cost: int, next_hop: int) -> "RTEntry":
+        """
+        Create a new Router Entry given only the necessary information.
+        """
         return RTEntry(1,
                        dest,
                        0xffffffff,
@@ -45,8 +67,19 @@ class RTEntry:
 
 
 class RoutingTable:
+    """
+    A table or a database of all the best paths within a network.
+
+    ---
+    Attributes:
+    ---
+    * _entries: List[RTEntry] : a list of all router entries
+    """
     def __init__(self):
         self._entries: List[RTEntry] = list()
 
     def add_entry(self, entry: RTEntry) -> None:
+        """
+        Add a new entry to the routing table.
+        """
         self._entries.append(entry)

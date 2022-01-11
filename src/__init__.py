@@ -1,3 +1,7 @@
+"""
+Bring all modules into scope.
+"""
+
 from .gui import *
 from .constants import *
 from .db import *
