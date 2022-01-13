@@ -30,6 +30,7 @@ class RouterGui:
     index: int
     id: int
     priority: int
+    ma: bool
 
     def is_in(self, coords: Tuple[int, int]) -> bool:
         """
@@ -43,12 +44,12 @@ class RouterGui:
                 return True
         return False
 
-    def _to_tuple(self) -> Tuple[int, int, int]:
+    def _to_tuple(self) -> Tuple[int, int, int, bool]:
         """
         Serializes this object's necessary information into a tuple.
         """
         # TODO update this
-        return (self.x, self.y, self.index)
+        return (self.index, self.id, self.priority, self.ma)
 
 
 @dataclass
@@ -64,12 +65,13 @@ class SwitchGui:
     * y: int : y coordinate of the switch on the canvas.
     * index: int : unique ID of a switch. No two routers or switches can have
                    the same ID.
-    * routers: List[RouterGui] : a list of routers connected to this switch.
+    * routers: List[Tuple[RouterGui, int]] : a list of routers connected to 
+      this switch as well as the cost of their link.
     """
     x: int
     y: int
     index: int
-    routers: List[RouterGui]
+    routers: List[Tuple[RouterGui, int]]
 
     def is_in(self, coords: Tuple[int, int]) -> bool:
         """
@@ -82,6 +84,13 @@ class SwitchGui:
             and (y >= self.y - RADIUS and y <= self.y + RADIUS):
                 return True
         return False
+    
+    def add(self, r: RouterGui, cost: int) -> None:
+        """
+        Add a new router to the switch.
+        """
+        t = (r, cost)
+        self.routers.append(t)
 
 
 @dataclass
@@ -183,6 +192,8 @@ class Gui:
         """
         net = Network()
         self._network = net
+        self._network.add_routers(self._tup_routers())
+        self._network.run()
 
     def _new_router(self, coords: Tuple[int, int], id: str, priority: int) -> None:
         """
@@ -209,7 +220,8 @@ class Gui:
                                        coords[1],
                                        self._index,
                                        ip.get(),
-                                       priority))
+                                       priority,
+                                       False))
         self._draw()
 
     def _remove_router(self, coords: Tuple[int, int]) -> None:
@@ -356,6 +368,22 @@ class Gui:
         :cost: cost of the link.
         """
         # we do this both ways, since we simulate how the OSPF actually works
+        t1, t2 = str(type(i1))[8:-2].split(".")[2],\
+                str(type(i2))[8:-2].split(".")[2]
+        if t1 == "SwitchGui" and t2 == "SwitchGui":
+            print("[W] Can't link two switches!")
+            return
+
+        if (t1 == "SwitchGui" and t2 == "RouterGui") or\
+           (t1 == "RouterGui" and t2 == "SwitchGui"):
+                if isinstance(i1, RouterGui) and isinstance(i2, SwitchGui):
+                    i1.ma = True
+                    i2.routers.append((i1, cost))
+                    
+                if isinstance(i2, RouterGui) and isinstance(i1, SwitchGui):
+                    i2.ma = True
+                    i1.routers.append((i2, cost))
+
         self._links.append(Link(i1, i2, cost))
         self._links.append(Link(i2, i1, cost))
         self._draw()
@@ -508,5 +536,39 @@ class Gui:
         b.pack()
 
     @classmethod
-    def tuplify(cls, input: Union[List[RouterGui], List[Link]]) -> List[Tuple[int, int, int]]:
+    def tuplify(cls, input: Union[List[RouterGui], List[Link]]) ->\
+            List[Union[Tuple[int, int, int, bool], Tuple[int, int, int]]]:
         return [i._to_tuple() for i in input]
+    
+    def _tup_routers(self) -> List[Tuple[int, int, int, bool]]:
+        """
+        Extract all necessary information from RouterGuis.
+        """
+        ret = []
+        for r in self._routers:
+            ret.append((r.index, r.id, r.priority, r.ma))
+        return ret
+
+    def _tup_links(self) -> List[Tuple[int, int, int]]:
+        """
+        Extract all necessary information from all the links in the network,
+        as well as all the multi-access information.
+        """
+        ret = []
+
+        for link in self._links:
+            if isinstance(link.a, SwitchGui) or isinstance(link.b, SwitchGui):
+                continue
+            else:
+                ret.append((link.a.index, link.b.index, link.cost))
+
+        new_links = []
+        for switch in self._switches:
+            for router, cost in switch.routers:
+                rs = [(r, c2) for r, c2 in switch.routers if r.index != router.index]
+                for r, c in rs:
+                    new_links.append((r.index, router.index, c))
+                    new_links.append((router.index, r.index, cost))
+
+        ret.extend(new_links)
+        return ret
