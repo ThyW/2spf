@@ -1,6 +1,7 @@
 import tkinter as tk
 from dataclasses import dataclass
 from typing import List, Optional, Tuple, Union
+from time import sleep
 
 from .constants import *
 from .net import Network
@@ -31,6 +32,8 @@ class RouterGui:
     id: int
     priority: int
     ma: bool
+    dr: bool = False
+    bdr: bool = False
 
     def is_in(self, coords: Tuple[int, int]) -> bool:
         """
@@ -50,6 +53,12 @@ class RouterGui:
         """
         # TODO update this
         return (self.index, self.id, self.priority, self.ma)
+
+    def set_dr(self) -> None:
+        self.dr = True
+
+    def set_bdr(self) -> None:
+        self.dr = True
 
 
 @dataclass
@@ -193,7 +202,21 @@ class Gui:
         net = Network()
         self._network = net
         self._network.add_routers(self._tup_routers())
-        self._network.run()
+        self._network.add_links(self._tup_links())
+        dr, bdr = self._network.get_dr_and_bdr()
+        for each in self._routers:
+            if each.index == dr:
+                each.set_dr()
+            if each.index == bdr:
+                each.set_bdr()
+        paths = self._network.run()
+
+        for path in paths:
+            self._draw_paths(path)
+            self._win.update()
+            sleep(2)
+        self._draw()
+        self._win.update()
 
     def _new_router(self, coords: Tuple[int, int], id: str, priority: int) -> None:
         """
@@ -305,6 +328,59 @@ class Gui:
         self._remove(coords)
         self._draw()
 
+    def _find(self, index: int) -> Optional[RouterGui]:
+        for router in self._routers:
+            if router.index == index:
+                return router
+
+    def _draw_paths(self, input: Tuple[int, int, List[int]]) -> None:
+        start, end, l = input
+        a, b = None, None
+
+        x = self._find(start)
+        if x:
+            a = x
+        x = self._find(end)
+        if x:
+            b = x
+
+        x = []
+        for each in l:
+            z = self._find(each)
+            if z:
+                x.append(z)
+        self._can.delete("all")
+
+        if a and b and all(x):
+            self._can.create_oval(a.x - RADIUS,
+                                  a.y - RADIUS,
+                                  a.x + RADIUS,
+                                  a.y + RADIUS,
+                                  fill="yellow")
+
+            self._can.create_oval(b.x - RADIUS,
+                                  b.y - RADIUS,
+                                  b.x + RADIUS,
+                                  b.y + RADIUS,
+                                  fill="green")
+
+            prev = a
+            print(x)
+            for z in x:
+                res = self._find(z.index)
+                if res:
+                    print("has")
+                    self._can.create_oval(res.x - RADIUS,
+                                          res.y - RADIUS,
+                                          res.x + RADIUS,
+                                          res.y + RADIUS,)
+                    self._can.create_line(prev.x,
+                                          prev.y,
+                                          res.x,
+                                          res.y,
+                                          fill="red")
+                    prev = res
+
     def _draw(self) -> None:
         """
         Draw all routers, switches and links to the canvas.
@@ -313,10 +389,24 @@ class Gui:
 
         # drawing of all routers
         for router in self._routers:
-            self._can.create_oval(router.x - RADIUS,
-                                  router.y - RADIUS,
-                                  router.x + RADIUS,
-                                  router.y + RADIUS)
+            if router.dr:
+                self._can.create_oval(router.x - RADIUS,
+                                      router.y - RADIUS,
+                                      router.x + RADIUS,
+                                      router.y + RADIUS,
+                                      fill="red")
+            if router.bdr:
+                self._can.create_oval(router.x - RADIUS,
+                                      router.y - RADIUS,
+                                      router.x + RADIUS,
+                                      router.y + RADIUS,
+                                      fill="blue")
+            else:
+                self._can.create_oval(router.x - RADIUS,
+                                      router.y - RADIUS,
+                                      router.x + RADIUS,
+                                      router.y + RADIUS)
+
             self._can.create_text(router.x,
                                   router.y + 25,
                                   text=str(router.index))
@@ -336,7 +426,7 @@ class Gui:
                                   router.y,
                                   router.x - RADIUS + 3,
                                   router.y)
-        
+
         for switch in self._switches:
             x, y = switch.x, switch.y
             self._can.create_rectangle(x - 2 * RADIUS,
@@ -567,8 +657,10 @@ class Gui:
             for router, cost in switch.routers:
                 rs = [(r, c2) for r, c2 in switch.routers if r.index != router.index]
                 for r, c in rs:
-                    new_links.append((r.index, router.index, c))
-                    new_links.append((router.index, r.index, cost))
-
+                    # add both way links, where cost is the cost is calculated
+                    # as the cost of the current router(router) and the router we are
+                    # currently linkint to(r)
+                    new_links.append((r.index, router.index, c + cost))
+                    new_links.append((router.index, r.index, cost + c))
         ret.extend(new_links)
         return ret

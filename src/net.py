@@ -4,6 +4,7 @@ from .router import Router
 from .ip import IpAddress
 from .link_state import LinkStateAdvertisement, RLABody
 
+
 class Network:
     """
     A representation and a simulation of a network running the OSPF protocol.
@@ -55,13 +56,14 @@ class Network:
 
             # simulation of becoming neighbors between two routers
             r1.add_neighbor(r2.send_hello())
+            # print(f"{r1._neighbors} neighbor")
 
             if r1 and r2:
                 lsa = LinkStateAdvertisement(0,
                                              0,
                                              1,
                                              r1.id.get(),
-                                             r1.id.get(),
+                                             r1.index,
                                              1,
                                              0,
                                              0,
@@ -76,7 +78,9 @@ class Network:
                                                  cost,
                                                  {}
                                                  )])
+                # print(lsa)
                 self._lsas.append(lsa)
+                # print("added lsa")
 
     def find_id(self, id: int) -> Optional[Router]:
         """
@@ -87,9 +91,66 @@ class Network:
                 return router
         return None
 
-    def run(self) -> None:
+    def get_dr_and_bdr(self) -> Tuple[int, int]:
+        """
+        Return the indexes of DR and BDR on the network.
+        """
+
+        if self.has_dr and self.has_bdr:
+            return (self._dr, self._bdr)
+        else:
+            self.election()
+            if self.has_dr and self.has_bdr:
+                return (self._dr, self._bdr)
+            else:
+                return (self._routers[0].index, self._routers[1].index)
+
+    def run(self) -> List[Tuple[int, int, List[int]]]:
+        """
+        Run the network simulation.
+
+        1. Elect a DR and BDR
+        2. Simulate all shortest paths from every to every router on the
+           Network.
+        3. Communicate all these changes and processes back to the GUI so it
+           can be drawn on the canvas.
+        """
         self.election()
-        pass
+        for each in self._routers:
+            each.recieve_advertisements(self._lsas)
+
+        path_list = []
+        [r.init_rt() for r in self._routers]
+        for router in self._routers:
+            path_list.extend(self._get_paths(router))
+
+        print(path_list)
+        return path_list
+
+    def _get_paths(self, start: Router) -> List[Tuple[int, int, List[int]]]:
+        """
+        Get best path from every router on the network to every router on the
+        network.
+        """
+        path_list = []
+        for entry in start.get_rt_entries():
+            l = []
+            dest = entry.destination_id
+            next = entry.next_hop
+            l.append(next)
+            while next != dest:
+                res = self.find_id(next)
+                if res:
+                    l.append(next)
+                    next = res.get_next_for(dest)
+                else:
+                    break
+
+            print(l)
+
+            path_list.append((start.index, dest, l))
+
+        return path_list
 
     def election(self) -> None:
         """
@@ -99,13 +160,19 @@ class Network:
         ma_capable = [r for r in self._routers if r.has_ma()]
 
         s = sorted(ma_capable, key=lambda x: x.priority, reverse=True)
+
+        if self.has_dr and self.has_bdr:
+            return
+
         for each in s:
             if not self.has_dr or not each.is_bdr() or not each.priority == 0:
                 each.set_dr()
+                self._dr = each.index
                 self.has_dr = True
                 break
         for each in s:
             if not each.is_dr() or self.has_bdr or not each.priority == 0:
                 each.set_bdr()
+                self._bdr = each.index
                 self.has_bdr = True
                 break

@@ -17,3 +17,4 @@
 - [x] (GUI) Implement a better configuration menu for routers and switches
 - [x] (GUI) Better symbols for routers and switches
 - [x] (GUI) Link cost should be able to be manually configured
+- [ ] (BACK-END) finish `Network.run()`

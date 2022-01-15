@@ -52,6 +52,9 @@ class Node:
         """
         return self.cost < o.cost
 
+    def __str__(self) -> str:
+        return f"{self.id}, {self.cost}, {self.neighbors}"
+
 
 class LinkStateDatabase:
     """
@@ -112,9 +115,9 @@ class LinkStateDatabase:
                 nodes.append(Node(adv.advertising_router))
         for each in nodes:
             for adv in self._content:
-                id, cost = (adv.bodies[0].link_id, adv.bodies[0].tos_zero)
+                id, cost = (adv.bodies[0].link_data, adv.bodies[0].tos_zero)
                 x = [n for n in nodes if id == n.id]
-                if x[0]:
+                if len(x) == 1:
                     if x[0].id == each.id:
                         each.add(x[0], cost)
 
@@ -125,7 +128,7 @@ class LinkStateDatabase:
         while ids:
             id = ids.pop(0)
             end = None
-            heap = []
+            heap: List[Node] = []
             for each in nodes:
                 if each.id == start:
                     each.cost = 0
@@ -151,8 +154,17 @@ class LinkStateDatabase:
                         rt.add_entry(RTEntry.create(id, cost, prevs[1]))
                     else:
                         rt.add_entry(RTEntry.create(id, cost, prevs[0]))
+                else:
+                    rt.add_entry(RTEntry.create(id, cost, end.id))
 
             else:
                 print("[ERROR] Incomplete entry, total cost.")
 
+        print(rt)
         return rt
+
+    def __str__(self) -> str:
+        s = ""
+        for each in self._content:
+            s += f"{each}\n"
+        return s

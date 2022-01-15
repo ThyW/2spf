@@ -83,3 +83,17 @@ class RoutingTable:
         Add a new entry to the routing table.
         """
         self._entries.append(entry)
+
+    def get_entries(self) -> List[RTEntry]:
+        """
+        Basically return self in a List form so all entries can be easily
+        iterated through.
+        """
+        return self._entries
+
+    def __str__(self) -> str:
+        s = ""
+
+        for each in self._entries:
+            s += f"{each.destination_id}; {each.next_hop}\n"
+        return s

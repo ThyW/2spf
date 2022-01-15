@@ -2,7 +2,7 @@ from typing import List
 
 from .db import LinkStateDatabase
 from .ip import IpAddress
-from .rt import RoutingTable
+from .rt import RoutingTable, RTEntry
 from .message import HelloMessage
 from .link_state import LinkStateAdvertisement
 
@@ -34,7 +34,7 @@ class Router:
       can be considered election candidates for the DR and BDR election.
     """
     def __init__(self, id: IpAddress, index: int, priority: int, ma: bool) -> None:
-        self._database: LinkStateDatabase = LinkStateDatabase(id.get())
+        self._database: LinkStateDatabase = LinkStateDatabase(index)
         self._routing_table: RoutingTable = RoutingTable()
         self._neighbors: List[int] = list()
         self._dr: bool = False
@@ -84,7 +84,7 @@ class Router:
         """
         Receive and handle any and all incoming link state advertisements.
         """
-        (self._database.add(x) for x in l)
+        [self._database.add(x) for x in l]
 
     def init_rt(self) -> None:
         """
@@ -124,3 +124,16 @@ class Router:
         words, if it's connected to a switch.
         """
         return self._ma
+
+    def get_rt_entries(self) -> List[RTEntry]:
+        """
+        Return all Routing Table entries.
+        """
+        return self._routing_table.get_entries()
+
+    def get_next_for(self, dest: int) -> int:
+        """
+        Return the next hop for a specified destination.
+        """
+        entry = list(filter(lambda x: x == dest, self.get_rt_entries()))
+        return entry[0].next_hop
