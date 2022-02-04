@@ -47,13 +47,13 @@ class Node:
     def __lt__(self, o: "Node") -> bool:
         """
         This method is implemented due to the fact that we are passing nodes
-        into a heap, since our Dijkstra's algorithm is implemented using a min
+        into a heap, because our Dijkstra's algorithm is implemented using a min
         heap.
         """
         return self.cost < o.cost
 
     def __str__(self) -> str:
-        return f"{self.id}, {self.cost}, {self.neighbors}"
+        return f"Node: {{ {self.id}, {self.cost}, {self.neighbors} }}"
 
 
 class LinkStateDatabase:
@@ -109,16 +109,24 @@ class LinkStateDatabase:
         """
         rt = RoutingTable()
         nodes: List[Node] = list()
-        # create graph
+        used_ids: List[int] = list()
+        # create a graph
+        # print(f"routing table content size: {len(self._content)}")
         for adv in self._content:
-            if not adv.advertising_router in nodes:
+            if not adv.advertising_router in used_ids:
                 nodes.append(Node(adv.advertising_router))
+                used_ids.append(adv.advertising_router)
+        # print(f"Nodes: {str(nodes)}")
         for each in nodes:
             for adv in self._content:
-                id, cost = (adv.bodies[0].link_data, adv.bodies[0].tos_zero)
-                x = [n for n in nodes if id == n.id]
+                # start, end, cost of link
+                adv_id, id, cost = (adv.advertising_router, adv.bodies[0].link_data, adv.bodies[0].tos_zero)
+                # node where the link originates from
+                x = [n for n in nodes if adv_id == n.id]
                 if len(x) == 1:
-                    if x[0].id == each.id:
+                    # if the end of the link is current router
+                    if id == each.id:
+                        # add it as a neighbor
                         each.add(x[0], cost)
 
         # run djikstra for each router from with this router as start
@@ -142,25 +150,33 @@ class LinkStateDatabase:
 
             while heap:
                 for pair in heap[0].neighbors:
-                    if pair[0].cost > pair[1] + heap[0].cost:
+                    if pair[0].cost > (pair[1] + heap[0].cost):
                         pair[0].cost = pair[1] + heap[0].cost
-                        prevs.append(heap[0])
+                        if not heap[0].id in prevs:
+                            prevs.append(heap[0].id)
                 heappop(heap)
             if end:
+                # TODO: Fix this, current idea is to craete a graph somewhere
+                # outside of the link state database  and add the nodes there
+                # and use that in order to create the paths. The current
+                # approach is really tedious and painful to do.
                 cost = end.cost
                 if prevs:
+                    prevs.append(end.id)
                     prevs.reverse()
-                    if len(prevs) == 2:
-                        rt.add_entry(RTEntry.create(id, cost, prevs[1]))
+                    print(f"when starting from {self._my_id}, node {end.id} has {len(prevs)} previous nodes: {str(prevs)}")
+                    if len(prevs) >= 2:
+                        rt.add_entry(RTEntry.create(id, cost, prevs[-1]))
                     else:
-                        rt.add_entry(RTEntry.create(id, cost, prevs[0]))
+                        print(f"from: {self._my_id} to {id}, next hop {end.id}")
+                        rt.add_entry(RTEntry.create(id, cost, end.id))
                 else:
+                    print("no previous")
                     rt.add_entry(RTEntry.create(id, cost, end.id))
 
             else:
                 print("[ERROR] Incomplete entry, total cost.")
 
-        print(rt)
         return rt
 
     def __str__(self) -> str:

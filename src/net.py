@@ -91,7 +91,7 @@ class Network:
                 return router
         return None
 
-    def get_dr_and_bdr(self) -> Tuple[int, int]:
+    def get_dr_and_bdr(self) -> Optional[Tuple[int, int]]:
         """
         Return the indexes of DR and BDR on the network.
         """
@@ -138,15 +138,17 @@ class Network:
             dest = entry.destination_id
             next = entry.next_hop
             l.append(next)
-            while next != dest:
-                res = self.find_id(next)
-                if res:
-                    l.append(next)
-                    next = res.get_next_for(dest)
-                else:
-                    break
-
-            print(l)
+            if not next == dest:
+                while next != dest:
+                    if not next:
+                        break
+                    res = self.find_id(next)
+                    if res:
+                        if next not in l:
+                            l.append(next)
+                        next = res.get_next_for(dest)
+                    else:
+                        break
 
             path_list.append((start.index, dest, l))
 
@@ -158,6 +160,9 @@ class Network:
         routers will be marked as such, DR will be RED and BDR will be BLUE.
         """
         ma_capable = [r for r in self._routers if r.has_ma()]
+
+        if not ma_capable:
+            return
 
         s = sorted(ma_capable, key=lambda x: x.priority, reverse=True)
 

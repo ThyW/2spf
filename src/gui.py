@@ -203,12 +203,15 @@ class Gui:
         self._network = net
         self._network.add_routers(self._tup_routers())
         self._network.add_links(self._tup_links())
-        dr, bdr = self._network.get_dr_and_bdr()
-        for each in self._routers:
-            if each.index == dr:
-                each.set_dr()
-            if each.index == bdr:
-                each.set_bdr()
+        dr_tuple = self._network.get_dr_and_bdr()
+
+        if dr_tuple:
+            dr, bdr = dr_tuple
+            for each in self._routers:
+                if each.index == dr:
+                    each.set_dr()
+                if each.index == bdr:
+                    each.set_bdr()
         paths = self._network.run()
 
         for path in paths:
@@ -334,52 +337,49 @@ class Gui:
                 return router
 
     def _draw_paths(self, input: Tuple[int, int, List[int]]) -> None:
-        start, end, l = input
-        a, b = None, None
-
-        x = self._find(start)
-        if x:
-            a = x
-        x = self._find(end)
-        if x:
-            b = x
-
-        x = []
-        for each in l:
-            z = self._find(each)
-            if z:
-                x.append(z)
         self._can.delete("all")
+        start, end, l = input
+        path = []
+        path.append(start)
 
-        if a and b and all(x):
-            self._can.create_oval(a.x - RADIUS,
-                                  a.y - RADIUS,
-                                  a.x + RADIUS,
-                                  a.y + RADIUS,
-                                  fill="yellow")
+        for each in l:
+            if each != end:
+                path.append(each)
+        path.append(end)
+        print(path)
 
-            self._can.create_oval(b.x - RADIUS,
-                                  b.y - RADIUS,
-                                  b.x + RADIUS,
-                                  b.y + RADIUS,
-                                  fill="green")
-
-            prev = a
-            print(x)
-            for z in x:
-                res = self._find(z.index)
-                if res:
-                    print("has")
-                    self._can.create_oval(res.x - RADIUS,
-                                          res.y - RADIUS,
-                                          res.x + RADIUS,
-                                          res.y + RADIUS,)
-                    self._can.create_line(prev.x,
-                                          prev.y,
-                                          res.x,
-                                          res.y,
+        last: Optional[RouterGui] = None
+        for ii, each in enumerate(path):
+            print(ii)
+            node = self._find(each)
+            if ii == 0:
+                if node:
+                    self._can.create_oval(node.x - RADIUS,
+                                          node.y - RADIUS,
+                                          node.x + RADIUS,
+                                          node.y + RADIUS,
                                           fill="red")
-                    prev = res
+            if ii == len(path) - 1:
+                if node:
+                    self._can.create_oval(node.x - RADIUS,
+                                          node.y - RADIUS,
+                                          node.x + RADIUS,
+                                          node.y + RADIUS,
+                                          fill="green")
+            else:
+                if node:
+                    self._can.create_oval(node.x - RADIUS,
+                                          node.y - RADIUS,
+                                          node.x + RADIUS,
+                                          node.y + RADIUS,
+                                          fill="white")
+            if not last:
+                last = node
+            else:
+                if node:
+                    self._can.create_line(last.x, last.y,
+                                          node.x, node.y)
+                    last = node
 
     def _draw(self) -> None:
         """

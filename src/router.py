@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from .db import LinkStateDatabase
 from .ip import IpAddress
@@ -131,9 +131,10 @@ class Router:
         """
         return self._routing_table.get_entries()
 
-    def get_next_for(self, dest: int) -> int:
+    def get_next_for(self, dest: int) -> Optional[int]:
         """
         Return the next hop for a specified destination.
         """
-        entry = list(filter(lambda x: x == dest, self.get_rt_entries()))
-        return entry[0].next_hop
+        entries = list(filter(lambda x: x.destination_id == dest, self.get_rt_entries()))
+        if entries:
+            return entries[0].next_hop
