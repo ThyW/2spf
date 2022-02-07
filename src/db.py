@@ -21,6 +21,7 @@ class Node:
         * cost int : Cost of getting to this vertex. The lower the index, the 
                      likelier is a vertex going to be visited.
         * neighbors: List[Tuple[Node, int]] : A list of all neighbor vertices.
+        * previous : A reference to the previous node.
     """
     def __init__(self, id: int) -> None:
         """
@@ -33,6 +34,7 @@ class Node:
         self.id: int = id
         self.cost: int = 100000
         self.neighbors: List[Tuple[Node, int]] = list()
+        self.previous: Optional[Node] = None
 
     def add(self, n: "Node", cost: int) -> None:
         """
@@ -111,12 +113,10 @@ class LinkStateDatabase:
         nodes: List[Node] = list()
         used_ids: List[int] = list()
         # create a graph
-        # print(f"routing table content size: {len(self._content)}")
         for adv in self._content:
             if not adv.advertising_router in used_ids:
                 nodes.append(Node(adv.advertising_router))
                 used_ids.append(adv.advertising_router)
-        # print(f"Nodes: {str(nodes)}")
         for each in nodes:
             for adv in self._content:
                 # start, end, cost of link
@@ -133,10 +133,17 @@ class LinkStateDatabase:
         start = self._my_id
         ids = [x.id for x in nodes if x.id != self._my_id]
 
+        # Here is where the real magic happens. We run djikstra's algorithm
+        # which is implemented using a min-heap.
+
+        # TODO: Using the builtin implementation of heap queue from python's
+        # standard library somehow does not work and there appears to be a 
+        # flaw. Therefore, our own heap implementation should be implemented
+        # and used.
         while ids:
             id = ids.pop(0)
             end = None
-            heap: List[Node] = []
+            heap = []
             for each in nodes:
                 if each.id == start:
                     each.cost = 0
@@ -146,34 +153,24 @@ class LinkStateDatabase:
                         end = each
                 heappush(heap, each)
 
-            prevs = []
-
             while heap:
-                for pair in heap[0].neighbors:
+                for pair in heap[0]:
                     if pair[0].cost > (pair[1] + heap[0].cost):
                         pair[0].cost = pair[1] + heap[0].cost
-                        if not heap[0].id in prevs:
-                            prevs.append(heap[0].id)
+                        pair[0].previous = heap[0]
                 heappop(heap)
             if end:
-                # TODO: Fix this, current idea is to craete a graph somewhere
-                # outside of the link state database  and add the nodes there
-                # and use that in order to create the paths. The current
-                # approach is really tedious and painful to do.
                 cost = end.cost
-                if prevs:
-                    prevs.append(end.id)
-                    prevs.reverse()
-                    print(f"when starting from {self._my_id}, node {end.id} has {len(prevs)} previous nodes: {str(prevs)}")
-                    if len(prevs) >= 2:
-                        rt.add_entry(RTEntry.create(id, cost, prevs[-1]))
-                    else:
-                        print(f"from: {self._my_id} to {id}, next hop {end.id}")
-                        rt.add_entry(RTEntry.create(id, cost, end.id))
-                else:
-                    print("no previous")
-                    rt.add_entry(RTEntry.create(id, cost, end.id))
 
+                if end.previous:
+                    p = end.previous
+                    x = []
+                    while p.id != start:
+                        x.append(p.id)
+                        if p.previous:
+                            p = p.previous
+                    x.append(end.id)
+                    rt.add_entry(RTEntry.create(id, cost, x[0]))
             else:
                 print("[ERROR] Incomplete entry, total cost.")
 

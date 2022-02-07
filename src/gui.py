@@ -346,11 +346,11 @@ class Gui:
             if each != end:
                 path.append(each)
         path.append(end)
-        print(path)
+        print(f"path from {start} to {end} is as follows: {path}")
 
         last: Optional[RouterGui] = None
         for ii, each in enumerate(path):
-            print(ii)
+            # print(ii)
             node = self._find(each)
             if ii == 0:
                 if node:

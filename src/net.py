@@ -124,7 +124,7 @@ class Network:
         for router in self._routers:
             path_list.extend(self._get_paths(router))
 
-        print(path_list)
+        # print(path_list)
         return path_list
 
     def _get_paths(self, start: Router) -> List[Tuple[int, int, List[int]]]:
