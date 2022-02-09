@@ -6,6 +6,7 @@ from time import sleep
 from .constants import *
 from .net import Network
 from .ip import IpAddress
+from .utils import debug, msg
 
 
 @dataclass
@@ -47,18 +48,18 @@ class RouterGui:
                 return True
         return False
 
+    def set_dr(self) -> None:
+        self.dr = True
+
+    def set_bdr(self) -> None:
+        self.bdr = True
+
     def _to_tuple(self) -> Tuple[int, int, int, bool]:
         """
         Serializes this object's necessary information into a tuple.
         """
         # TODO update this
         return (self.index, self.id, self.priority, self.ma)
-
-    def set_dr(self) -> None:
-        self.dr = True
-
-    def set_bdr(self) -> None:
-        self.dr = True
 
 
 @dataclass
@@ -190,7 +191,7 @@ class Gui:
 
     def run(self) -> None:
         """
-        Create the window and the GUI, than run it..
+        Create the window and the GUI, than run it.
         """
         self._can.mainloop()
 
@@ -207,11 +208,14 @@ class Gui:
 
         if dr_tuple:
             dr, bdr = dr_tuple
-            for each in self._routers:
-                if each.index == dr:
-                    each.set_dr()
-                if each.index == bdr:
-                    each.set_bdr()
+            debug(f"GUI: dr and bdr tuple: {dr_tuple}")
+            res = self._find(dr)
+            if res:
+                res.set_dr()
+            res = self._find(bdr)
+            if res:
+                res.set_bdr()
+
         paths = self._network.run()
 
         for path in paths:
@@ -239,7 +243,7 @@ class Gui:
         if i:
             ip = IpAddress(i)
         else:
-            print("[ERROR] Can't conver to IP Address")
+            msg("e",f"Can't convert {id} to an IP Address")
             ip = IpAddress(self._index)
 
         self._routers.append(RouterGui(coords[0],
@@ -353,43 +357,40 @@ class Gui:
         """
         path = input
 
-        last: Optional[RouterGui] = None
-        for ii, each in enumerate(path):
-            node = self._find(each)
-            if ii == 0:
-                if node:
-                    self._can.create_oval(node.x - RADIUS,
-                                          node.y - RADIUS,
-                                          node.x + RADIUS,
-                                          node.y + RADIUS,
-                                          fill="red")
-            if ii == len(path) - 1:
-                if node:
-                    self._can.create_oval(node.x - RADIUS,
-                                          node.y - RADIUS,
-                                          node.x + RADIUS,
-                                          node.y + RADIUS,
-                                          fill="green")
-            else:
-                if node:
-                    self._can.create_oval(node.x - RADIUS,
-                                          node.y - RADIUS,
-                                          node.x + RADIUS,
-                                          node.y + RADIUS,
-                                          fill="white")
-            if not last:
-                last = node
-            else:
-                if node:
-                    self._can.create_line(last.x, last.y,
-                                          node.x, node.y)
-                    last = node
+        last = None
+        self._can.delete("all")
+        self._draw()
+        for id in path:
+            res = self._find(id)
+            if res:
+                if not last:
+                    last = res
+                if last:
+                    self._can.create_line(res.x,
+                                          res.y,
+                                          last.x,
+                                          last.y,
+                                          fill="blue",
+                                          width=3)
+                    last = res
 
     def _draw(self) -> None:
         """
         Draw all routers, switches and links to the canvas.
         """
         self._can.delete("all")
+
+        # we draw the links first, so we can cover them with routers and 
+        # switches later.
+        for link in self._links:
+            a = link.a
+            b = link.b
+            c = link.cost
+
+            self._can.create_line(a.x, a.y,  b.x, b.y)
+            self._can.create_text((a.x + b.x) / 2 + 10,
+                                  (a.y + b.y) / 2 - 10,
+                                  text=f"{c}")
 
         # drawing of all routers
         for router in self._routers:
@@ -398,18 +399,19 @@ class Gui:
                                       router.y - RADIUS,
                                       router.x + RADIUS,
                                       router.y + RADIUS,
-                                      fill="red")
-            if router.bdr:
+                                      fill="#ff2222")
+            elif router.bdr:
                 self._can.create_oval(router.x - RADIUS,
                                       router.y - RADIUS,
                                       router.x + RADIUS,
                                       router.y + RADIUS,
-                                      fill="blue")
+                                      fill="#2222ff")
             else:
                 self._can.create_oval(router.x - RADIUS,
                                       router.y - RADIUS,
                                       router.x + RADIUS,
-                                      router.y + RADIUS)
+                                      router.y + RADIUS,
+                                      fill="#4f4f4f")
 
             self._can.create_text(router.x,
                                   router.y + 25,
@@ -436,17 +438,9 @@ class Gui:
             self._can.create_rectangle(x - 2 * RADIUS,
                                        y - RADIUS,
                                        x + 2 * RADIUS,
-                                       y + RADIUS)
+                                       y + RADIUS,
+                                       fill="white")
 
-        for link in self._links:
-            a = link.a
-            b = link.b
-            c = link.cost
-
-            self._can.create_line(a.x, a.y,  b.x, b.y)
-            self._can.create_text((a.x + b.x) / 2 + 10,
-                                  (a.y + b.y) / 2 - 10,
-                                  text=f"{c}")
 
     def _link(self,
               i1: Union[RouterGui, SwitchGui],
@@ -465,7 +459,7 @@ class Gui:
         t1, t2 = str(type(i1))[8:-2].split(".")[2],\
                 str(type(i2))[8:-2].split(".")[2]
         if t1 == "SwitchGui" and t2 == "SwitchGui":
-            print("[W] Can't link two switches!")
+            msg("w", f"Can't link two switches!")
             return
 
         if (t1 == "SwitchGui" and t2 == "RouterGui") or\
@@ -533,7 +527,7 @@ class Gui:
             try:
                 priority = int(priority)
             except ValueError:
-                print("[ERROR] priority must be an integer value!")
+                msg("e", "Priority must be an integer value!")
                 priority = 1
             x, y = args[2]
             self._new_router((x, y), id, priority)
@@ -542,7 +536,7 @@ class Gui:
             try:
                 cost = int(cost)
             except ValueError:
-                print("[ERROR] Cost has to be an integer value!")
+                msg("e", "Cost has to be an integer value!")
                 cost = 10
             link = args[1]
 
@@ -661,8 +655,8 @@ class Gui:
             for router, cost in switch.routers:
                 rs = [(r, c2) for r, c2 in switch.routers if r.index != router.index]
                 for r, c in rs:
-                    # add both way links, where cost is the cost is calculated
-                    # as the cost of the current router(router) and the router we are
+                    # add both way links, where cost is calculated as the cost
+                    # of the current router(router) and the router we are
                     # currently linkint to(r)
                     new_links.append((r.index, router.index, c + cost))
                     new_links.append((router.index, r.index, cost + c))

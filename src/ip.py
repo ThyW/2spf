@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from typing import Optional
+from .utils import msg
 
 
 class IpAddress:
@@ -59,10 +60,10 @@ class IpAddress:
             try:
                 num = int(c)
             except ValueError:
-                print(f"[ERROR] invalid integer value {c}")
+                msg("e", f"Invalid integer value '{c}'")
                 return None
             if num > 255 and num < 0:
-                print(f"[ERROR] {c} is not within the range of unsigned 8 bit integer!")
+                msg("e", f"{c} is not within the range of unsigned 8 bit integer!")
                 return None
             nums.append(num)
         if len(nums) == 4:

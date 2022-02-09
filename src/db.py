@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-
-from typing import List, Optional, Tuple
 from .link_state import LinkStateAdvertisement
 from .rt import RoutingTable, RTEntry
-
 from heapq import heappop, heappush
+from typing import List, Optional, Tuple
+from sys import maxsize
 
 
 class Node:
@@ -32,7 +31,7 @@ class Node:
              node.
         """
         self.id: int = id
-        self.cost: int = 100000
+        self.cost: int = maxsize
         self.neighbors: List[Tuple[Node, int]] = list()
         self.previous: Optional[Node] = None
 
@@ -46,15 +45,12 @@ class Node:
         """
         self.neighbors.append((n, cost))
 
-    def __le__(self, o: "Node") -> bool:
+    def __lt__(self, o: "Node") -> bool:
         """
         This method is implemented due to the fact that we are passing nodes
         into a heap, because our Dijkstra's algorithm is implemented using a min
         heap.
         """
-        return self.cost <= o.cost
-
-    def __lt__(self, o: "Node") -> bool:
         return self.cost < o.cost
 
     def __str__(self) -> str:
@@ -147,7 +143,7 @@ class LinkStateDatabase:
                 if each.id == start:
                     each.cost = 0
                 else:
-                    each.cost = 100000
+                    each.cost = maxsize
                     if each.id == id:
                         end = each
                 heappush(heap, each)

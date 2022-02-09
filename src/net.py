@@ -3,6 +3,7 @@ from typing import List, Optional, Tuple
 from .router import Router
 from .ip import IpAddress
 from .link_state import LinkStateAdvertisement, RLABody
+from .utils import debug
 
 
 class Network:
@@ -77,9 +78,7 @@ class Network:
                                                  cost,
                                                  {}
                                                  )])
-                # print(lsa)
                 self._lsas.append(lsa)
-                # print("added lsa")
 
     def find_id(self, id: int) -> Optional[Router]:
         """
@@ -165,18 +164,21 @@ class Network:
 
         s = sorted(ma_capable, key=lambda x: x.priority, reverse=True)
 
+        debug(f"sorted dr and bdr is {[x.index for x in s]}")
+
         if self.has_dr and self.has_bdr:
             return
 
         for each in s:
-            if not self.has_dr or not each.is_bdr() or not each.priority == 0:
+            if not self.has_dr and not each.is_bdr() and not each.priority == 0:
                 each.set_dr()
                 self._dr = each.index
                 self.has_dr = True
                 break
         for each in s:
-            if not each.is_dr() or self.has_bdr or not each.priority == 0:
+            if not self.has_bdr and not each.is_dr() and not each.priority == 0:
                 each.set_bdr()
                 self._bdr = each.index
                 self.has_bdr = True
                 break
+        debug(f"dr and bdr are: {self._dr}, {self._bdr}")
