@@ -332,25 +332,29 @@ class Gui:
         self._draw()
 
     def _find(self, index: int) -> Optional[RouterGui]:
+        """
+        Find a router given it's unique router index.
+        ---
+        :index : index of the router we want to find.
+        """
         for router in self._routers:
             if router.index == index:
                 return router
 
-    def _draw_paths(self, input: Tuple[int, int, List[int]]) -> None:
-        self._can.delete("all")
-        start, end, l = input
-        path = []
-        path.append(start)
+    def _draw_paths(self, input: List[int]) -> None:
+        """
+        Prepare the paths, which are supposed to be drawn to the screen.
 
-        for each in l:
-            if each != end:
-                path.append(each)
-        path.append(end)
-        # print(f"path from {start} to {end} is as follows: {path}")
+        ---
+        Arguments:
+        ---
+        :input: a list of the node indecies, which are to be drawn to the
+                screen.
+        """
+        path = input
 
         last: Optional[RouterGui] = None
         for ii, each in enumerate(path):
-            # print(ii)
             node = self._find(each)
             if ii == 0:
                 if node:

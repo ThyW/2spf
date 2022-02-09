@@ -56,7 +56,6 @@ class Network:
 
             # simulation of becoming neighbors between two routers
             r1.add_neighbor(r2.send_hello())
-            # print(f"{r1._neighbors} neighbor")
 
             if r1 and r2:
                 lsa = LinkStateAdvertisement(0,
@@ -103,9 +102,9 @@ class Network:
             if self.has_dr and self.has_bdr:
                 return (self._dr, self._bdr)
             else:
-                return (self._routers[0].index, self._routers[1].index)
+                return None
 
-    def run(self) -> List[Tuple[int, int, List[int]]]:
+    def run(self) -> List[List[int]]:
         """
         Run the network simulation.
 
@@ -121,39 +120,36 @@ class Network:
 
         path_list = []
         [r.init_rt() for r in self._routers]
-        for _ in self._routers:
-            # print(f"{r.index}: {r._routing_table}")
-            pass
         for router in self._routers:
             path_list.extend(self._get_paths(router))
 
-        # print(path_list)
         return path_list
 
-    def _get_paths(self, start: Router) -> List[Tuple[int, int, List[int]]]:
+    def _get_paths(self, start: Router) -> List[List[int]]:
         """
         Get best path from every router on the network to every router on the
         network.
         """
         path_list = []
         for entry in start.get_rt_entries():
-            l = []
+            output = [start.index]
             dest = entry.destination_id
             next = entry.next_hop
-            l.append(next)
+            output.append(next)
             if not next == dest:
                 while next != dest:
                     if not next:
                         break
                     res = self.find_id(next)
                     if res:
-                        if next not in l:
-                            l.append(next)
+                        if next not in output:
+                            output.append(next)
                         next = res.get_next_for(dest)
                     else:
                         break
+            output.append(dest)
 
-            path_list.append((start.index, dest, l))
+            path_list.append(output)
 
         return path_list
 
