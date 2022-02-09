@@ -46,12 +46,15 @@ class Node:
         """
         self.neighbors.append((n, cost))
 
-    def __lt__(self, o: "Node") -> bool:
+    def __le__(self, o: "Node") -> bool:
         """
         This method is implemented due to the fact that we are passing nodes
         into a heap, because our Dijkstra's algorithm is implemented using a min
         heap.
         """
+        return self.cost <= o.cost
+
+    def __lt__(self, o: "Node") -> bool:
         return self.cost < o.cost
 
     def __str__(self) -> str:
@@ -136,10 +139,6 @@ class LinkStateDatabase:
         # Here is where the real magic happens. We run djikstra's algorithm
         # which is implemented using a min-heap.
 
-        # TODO: Using the builtin implementation of heap queue from python's
-        # standard library somehow does not work and there appears to be a 
-        # flaw. Therefore, our own heap implementation should be implemented
-        # and used.
         while ids:
             id = ids.pop(0)
             end = None
@@ -154,22 +153,23 @@ class LinkStateDatabase:
                 heappush(heap, each)
 
             while heap:
-                for pair in heap[0]:
+                for pair in heap[0].neighbors:
                     if pair[0].cost > (pair[1] + heap[0].cost):
                         pair[0].cost = pair[1] + heap[0].cost
                         pair[0].previous = heap[0]
                 heappop(heap)
+
             if end:
                 cost = end.cost
 
                 if end.previous:
                     p = end.previous
-                    x = []
+                    x = [end.id]
                     while p.id != start:
                         x.append(p.id)
                         if p.previous:
                             p = p.previous
-                    x.append(end.id)
+                    x.reverse()
                     rt.add_entry(RTEntry.create(id, cost, x[0]))
             else:
                 print("[ERROR] Incomplete entry, total cost.")

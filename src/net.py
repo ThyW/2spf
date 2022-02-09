@@ -121,6 +121,9 @@ class Network:
 
         path_list = []
         [r.init_rt() for r in self._routers]
+        for _ in self._routers:
+            # print(f"{r.index}: {r._routing_table}")
+            pass
         for router in self._routers:
             path_list.extend(self._get_paths(router))
 

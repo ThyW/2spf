@@ -95,5 +95,5 @@ class RoutingTable:
         s = ""
 
         for each in self._entries:
-            s += f"{each.destination_id}; {each.next_hop}\n"
+            s += f"{each}\n"
         return s
