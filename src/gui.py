@@ -175,14 +175,8 @@ class Gui:
         self._consturct_network_b = tk.Button(self._win,
                                               text="Construct Network",
                                               command=self._construct)
-        self._cost_e = tk.Entry(self._win)
-        self._cost_l = tk.Label(self._win,
-                                text="Link cost")
 
         self._can.pack()
-
-        self._cost_l.pack()
-        self._cost_e.pack()
         self._consturct_network_b.pack()
 
         self._can.bind("<Button-1>", self._left_click)
@@ -480,7 +474,7 @@ class Gui:
                 type: str,
                 coords: Tuple[int, int],
                 win: Optional[tk.Toplevel] = None,
-                r: Union[RouterGui, SwitchGui] = None) -> None:
+                r: Union[RouterGui, SwitchGui] | None = None) -> None:
         """
         Handle the action of showing appropriate pop up windows based on their
         type.
